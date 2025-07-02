@@ -1,6 +1,9 @@
 import pymysql
 import json
-import os
+import osimport logging
+
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 def get_config():
     return {
@@ -21,7 +24,7 @@ def get_db_connection():
     )
 
 def lambda_handler(event, context):
-
+    logger.info("Appel de la lambda")
     # The body of the requests
     body = json.loads(event.get('body', '{}'))
     # The Path parameters
@@ -30,13 +33,17 @@ def lambda_handler(event, context):
     path = event.get('path', '')
     # The method Of the request
     method = event.get('httpMethod', '')
+    logger.info(f"Request method: {method}, path: {path}")
     # Si la method que j'ai recu et le path c ....
     if method == 'GET' and path == '/transactions':
         connection = get_db_connection()
         transactions = get_transactions(connection)
         return {
             "statusCode": 200,
-            "body": transactions
+            "body": json.dumps(transactions),
+            "headers": {
+                "Content-Type": "application/json"
+            }
         }
 
     return {
@@ -47,9 +54,10 @@ def lambda_handler(event, context):
 
 
 def get_data(connection, query):
-    cursor = connection.cursor()
-    cursor.execute(query)
-    rows = cursor.fetchall()
+    rows = []
+    with connection.cursor() as cursor:
+        cursor.execute(query)
+        rows = cursor.fetchall()
     return rows
 
 def get_transactions(connection):
